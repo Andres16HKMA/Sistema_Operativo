@@ -1,6 +1,13 @@
 import customtkinter as ctk
+from Recursos.recursos import procesos_activos, actualizar_lista_procesos 
 
 def abrir_calculadora():
+    global procesos_activos  # Accede a la lista global de procesos activos
+
+    # Añadir "Calculadora" a la lista de procesos activos
+    procesos_activos.append("Calculadora")
+    actualizar_lista_procesos()  # Actualizar la visualización de procesos
+
     # Crear una nueva ventana para la calculadora
     calculadora = ctk.CTkToplevel()
     calculadora.geometry("300x400")
@@ -12,7 +19,6 @@ def abrir_calculadora():
     entrada = ctk.CTkEntry(calculadora, width=200)
     entrada.grid(row=0, column=0, columnspan=4, padx=10, pady=10)
 
-    # Función para añadir texto a la entrada
     def agregar_a_entrada(simbolo):
         entrada.insert("end", simbolo)
 
@@ -40,7 +46,7 @@ def abrir_calculadora():
 
     for (texto, fila, columna) in botones:
         if texto == '=':
-            boton = ctk.CTkButton(calculadora, text=texto,width=50, height=50 ,command=calcular)
+            boton = ctk.CTkButton(calculadora, text=texto, width=50, height=50 ,command=calcular)
         elif texto == 'C':  # Limpiar la entrada
             boton = ctk.CTkButton(calculadora, text=texto, width=50, height=50 ,command=limpiar)
         else:
@@ -48,4 +54,14 @@ def abrir_calculadora():
         
         boton.grid(row=fila, column=columna, padx=10, pady=10)
 
+    # Al cerrar la calculadora, quitarla de la lista de procesos activos
+    def on_close():
+        procesos_activos.remove("Calculadora")
+        actualizar_lista_procesos()  # Actualiza la lista de procesos al cerrar
+        calculadora.destroy()
+
+    # Configurar el evento de cierre de ventana
+    calculadora.protocol("WM_DELETE_WINDOW", on_close)
+
     calculadora.mainloop()
+

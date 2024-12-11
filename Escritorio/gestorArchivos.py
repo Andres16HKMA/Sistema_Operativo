@@ -7,20 +7,32 @@ from docx import Document  # Asegúrate de tener la biblioteca python-docx insta
 from fpdf import FPDF  # Asegúrate de tener la biblioteca fpdf instalada
 import csv
 from openpyxl import Workbook  # Asegúrate de tener la biblioteca openpyxl instalada
+from Recursos.recursos import actualizar_lista_procesos, procesos_activos  # Asegúrate de tener esta función importada
 
 # Función para mostrar el gestor de archivos
-def mostrar_gestor_archivos():
+def mostrar_gestor_archivos(usuario):
+    # Crear la carpeta base para el usuario
+    ruta_base_usuario = os.path.join("usuarios", usuario)
+    
     # Crear la ventana del gestor
+    global gestor  # Asegúrate de que el gestor se pueda referenciar en el cierre
     gestor = ctk.CTk()
     gestor.geometry("800x600")
-    gestor.title("Gestor de Archivos")
-
+    gestor.title(f"Gestor de Archivos - {usuario}")
+    procesos_activos.append("Gestor de Archivos")  # Asegúrate de que procesos_activos esté definido
+    actualizar_lista_procesos()  # Actualizar la visualización de procesos
+    
     # Frame principal
     frame = ctk.CTkFrame(gestor, fg_color="#282c34")
     frame.grid(row=0, column=0, padx=20, pady=20, sticky="nsew")
 
-    # Función para listar archivos y carpetas
+    # Función para listar archivos y carpetas dentro de la carpeta base del usuario
+
     def listar_archivos(ruta):
+        if not ruta.startswith(ruta_base_usuario):  # Bloquea rutas fuera de la carpeta base
+            messagebox.showerror("Error", "No tienes permiso para acceder a esta carpeta.")
+            return
+
         lista_archivos.delete(0, ctk.END)  # Limpiar la lista
         try:
             archivos = os.listdir(ruta)
@@ -28,6 +40,8 @@ def mostrar_gestor_archivos():
                 lista_archivos.insert(ctk.END, archivo)
         except PermissionError:
             messagebox.showerror("Error", "Permiso denegado en este directorio")
+
+    # Función para abrir carpetas o archivos dentro de la carpeta base
 
     # Función para abrir PDFs y visualizarlos en una ventana
     def abrir_pdf(ruta_pdf):
@@ -59,9 +73,12 @@ def mostrar_gestor_archivos():
         seleccionado = lista_archivos.get(ctk.ACTIVE)
         nueva_ruta = os.path.join(entry_ruta.get(), seleccionado)
         if os.path.isdir(nueva_ruta):
-            entry_ruta.delete(0, ctk.END)
-            entry_ruta.insert(0, nueva_ruta)
-            listar_archivos(nueva_ruta)
+            if nueva_ruta.startswith(ruta_base_usuario):  # Permitir solo si la ruta es válida
+                entry_ruta.delete(0, ctk.END)
+                entry_ruta.insert(0, nueva_ruta)
+                listar_archivos(nueva_ruta)
+            else:
+                messagebox.showerror("Error", "No tienes permiso para acceder a esta carpeta.")
         elif seleccionado.endswith(".pdf"):
             abrir_pdf(nueva_ruta)
 
@@ -69,10 +86,12 @@ def mostrar_gestor_archivos():
     def volver_atras():
         ruta_actual = entry_ruta.get()
         ruta_padre = os.path.dirname(ruta_actual)
-        entry_ruta.delete(0, ctk.END)
-        entry_ruta.insert(0, ruta_padre)
-        listar_archivos(ruta_padre)
-    # Función para borrar archivos o carpetas
+        if ruta_padre.startswith(ruta_base_usuario):  # Solo permitir navegar dentro de la carpeta base
+            entry_ruta.delete(0, ctk.END)
+            entry_ruta.insert(0, ruta_padre)
+            listar_archivos(ruta_padre)
+        else:
+            messagebox.showerror("Error", "No puedes salir de tu carpeta principal.")
 
     def borrar_item():
         seleccionado = lista_archivos.get(ctk.ACTIVE)
@@ -93,10 +112,10 @@ def mostrar_gestor_archivos():
             except Exception as e:
                 messagebox.showerror("Error", f"No se pudo eliminar '{seleccionado}': {e}")
 
-    # Ruta actual
+ # Ruta actual
     entry_ruta = ctk.CTkEntry(frame, width=600)
     entry_ruta.grid(row=0, column=0, pady=10, padx=10)
-    entry_ruta.insert(0, os.getcwd())  # Ruta inicial (directorio actual)
+    entry_ruta.insert(0, ruta_base_usuario)  # Configurar la ruta inicial a la carpeta del usuario
 
     # Botón para volver atrás
     boton_atras = ctk.CTkButton(frame, text="Atrás", command=volver_atras)
@@ -105,7 +124,7 @@ def mostrar_gestor_archivos():
     # Listbox para mostrar los archivos
     lista_archivos = Listbox(frame, height=20, width=80)
     lista_archivos.grid(row=1, column=0, pady=10, padx=10, columnspan=2)
-    listar_archivos(entry_ruta.get())  # Listar archivos del directorio actual
+    listar_archivos(ruta_base_usuario)  # Listar archivos del directorio inicial
 
     # Botón para abrir el archivo o carpeta seleccionada
     boton_abrir = ctk.CTkButton(frame, text="Abrir", command=abrir_item)
@@ -114,6 +133,7 @@ def mostrar_gestor_archivos():
     # Botón para borrar el archivo o carpeta seleccionada
     boton_borrar = ctk.CTkButton(frame, text="Borrar", command=borrar_item)
     boton_borrar.grid(row=2, column=1, pady=10, padx=10)
+
 
     # Función para crear un archivo desde el proyecto
     def crear_archivo():
@@ -192,5 +212,13 @@ def mostrar_gestor_archivos():
     # Botón para crear un archivo nuevo
     boton_crear_archivo = ctk.CTkButton(frame, text="Crear Archivo", command=crear_archivo)
     boton_crear_archivo.grid(row=3, column=0, pady=10, padx=10)
+
+
+    def on_closing():
+        procesos_activos.remove("Gestor de Archivos")  # Remover al cerrar
+        actualizar_lista_procesos()  # Actualizar la visualización de procesos
+        gestor.destroy()
+
+    gestor.protocol("WM_DELETE_WINDOW", on_closing)  # Asegurarse de llamar a on_closing en el cierre
 
     gestor.mainloop()
