@@ -8,20 +8,52 @@ from fpdf import FPDF  # Asegúrate de tener la biblioteca fpdf instalada
 import csv
 from openpyxl import Workbook  # Asegúrate de tener la biblioteca openpyxl instalada
 from Recursos.recursos import actualizar_lista_procesos, procesos_activos  # Asegúrate de tener esta función importada
+import sqlite3
+
+
+def obtener_rol(usuario):
+    """Obtiene el rol de un usuario a partir de la base de datos.
+
+    Args:
+        usuario (str): Nombre de usuario.
+
+    Returns:
+        str: Rol del usuario (por ejemplo, 'admin' o 'usuario'). Si el usuario no existe, devuelve None.
+    """
+
+    conn = sqlite3.connect('usuarios.db')  # Ajusta la ruta a tu base de datos
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT rol FROM usuarios WHERE usuario = ?', (usuario,))
+    resultado = cursor.fetchone()
+    global rol_usuario
+    rol_usuario = resultado[0]  # Almacena el rol en la variable global
+    conn.close()
+    return rol_usuario
+
+
+    
 
 # Función para mostrar el gestor de archivos
 def mostrar_gestor_archivos(usuario):
     # Crear la carpeta base para el usuario
-    ruta_base_usuario = os.path.join("usuarios", usuario)
-    
+    ruta_base_usuario = "C:/Users/mateo/OneDrive/Documentos/Sistema Operativo/users/" + usuario  # Adjust the path as needed
+    raiz = "C:/Users/mateo/OneDrive/Documentos/Sistema Operativo/users" # Adjust the path as needed
+
     # Crear la ventana del gestor
     global gestor  # Asegúrate de que el gestor se pueda referenciar en el cierre
     gestor = ctk.CTk()
     gestor.geometry("800x600")
     gestor.title(f"Gestor de Archivos - {usuario}")
+    gestor.resizable(False, False)  # No permitir redimensionar la ventana
+
     procesos_activos.append("Gestor de Archivos")  # Asegúrate de que procesos_activos esté definido
-    actualizar_lista_procesos()  # Actualizar la visualización de procesos
-    
+    try:
+        actualizar_lista_procesos()  # Actualizar la visualización de procesos
+    except ValueError:
+        print("No se pudo actualizar el proceso")
+    except Exception as e:
+        print(f"Ocurrió un error con el gestor: {e}")      
     # Frame principal
     frame = ctk.CTkFrame(gestor, fg_color="#282c34")
     frame.grid(row=0, column=0, padx=20, pady=20, sticky="nsew")
@@ -29,7 +61,12 @@ def mostrar_gestor_archivos(usuario):
     # Función para listar archivos y carpetas dentro de la carpeta base del usuario
 
     def listar_archivos(ruta):
-        if not ruta.startswith(ruta_base_usuario):  # Bloquea rutas fuera de la carpeta base
+        rol_usuario = None  # Variable global para almacenar el rol del usuario
+
+        if rol_usuario is None:
+            rol_usuario = obtener_rol(usuario)
+
+        if not ruta.startswith(ruta_base_usuario) and rol_usuario!="Administrador":  # Bloquea rutas fuera de la carpeta base
             messagebox.showerror("Error", "No tienes permiso para acceder a esta carpeta.")
             return
 
@@ -84,15 +121,17 @@ def mostrar_gestor_archivos(usuario):
 
     # Función para volver atrás en el directorio
     def volver_atras():
-        ruta_actual = entry_ruta.get()
-        ruta_padre = os.path.dirname(ruta_actual)
-        if ruta_padre.startswith(ruta_base_usuario):  # Solo permitir navegar dentro de la carpeta base
-            entry_ruta.delete(0, ctk.END)
-            entry_ruta.insert(0, ruta_padre)
-            listar_archivos(ruta_padre)
+        if raiz!=entry_ruta.get():
+            ruta_actual = entry_ruta.get()
+            ruta_padre = os.path.dirname(ruta_actual)
+            if ruta_padre.startswith(ruta_base_usuario) or rol_usuario=="Administrador":  # Solo permitir navegar dentro de la carpeta base
+                entry_ruta.delete(0, ctk.END)
+                entry_ruta.insert(0, ruta_padre)
+                listar_archivos(ruta_padre)
+            else:
+                messagebox.showerror("Error", "No puedes salir de tu carpeta principal.")
         else:
-            messagebox.showerror("Error", "No puedes salir de tu carpeta principal.")
-
+            messagebox.showerror("Error", "No puede acceder mas atras.")
     def borrar_item():
         seleccionado = lista_archivos.get(ctk.ACTIVE)
         if not seleccionado:
@@ -215,9 +254,15 @@ def mostrar_gestor_archivos(usuario):
 
 
     def on_closing():
-        procesos_activos.remove("Gestor de Archivos")  # Remover al cerrar
-        actualizar_lista_procesos()  # Actualizar la visualización de procesos
-        gestor.destroy()
+        try:
+            procesos_activos.remove("Gestor de Archivos")  # Remover al cerrar
+            actualizar_lista_procesos()  # Actualizar la visualización de procesos
+        except ValueError:
+            print("El gestor no estaba en la lista de procesos activos.")
+        except Exception as e:
+            print(f"Ocurrió un error al cerrar el gestor: {e}")
+        finally:
+            gestor.destroy()
 
     gestor.protocol("WM_DELETE_WINDOW", on_closing)  # Asegurarse de llamar a on_closing en el cierre
 

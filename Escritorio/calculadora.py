@@ -6,7 +6,12 @@ def abrir_calculadora():
 
     # Añadir "Calculadora" a la lista de procesos activos
     procesos_activos.append("Calculadora")
-    actualizar_lista_procesos()  # Actualizar la visualización de procesos
+    try:
+        actualizar_lista_procesos()  # Actualizar la visualización de procesos
+    except ValueError:
+        print("No se pudo actualizar el proceso")
+    except Exception as e:
+        print(f"Ocurrió un error con la calculadora: {e}")  
 
     # Crear una nueva ventana para la calculadora
     calculadora = ctk.CTkToplevel()
@@ -56,9 +61,16 @@ def abrir_calculadora():
 
     # Al cerrar la calculadora, quitarla de la lista de procesos activos
     def on_close():
-        procesos_activos.remove("Calculadora")
-        actualizar_lista_procesos()  # Actualiza la lista de procesos al cerrar
-        calculadora.destroy()
+        try:
+            actualizar_lista_procesos()  # Actualiza la lista de procesos al cerrar
+        except ValueError:
+            print("La calculadora no estaba en la lista de procesos activos.")
+        except Exception as e:
+            print(f"Ocurrió un error al cerrar la calculadora: {e}")
+        finally:
+            procesos_activos.remove("Calculadora")
+            calculadora.destroy()
+
 
     # Configurar el evento de cierre de ventana
     calculadora.protocol("WM_DELETE_WINDOW", on_close)

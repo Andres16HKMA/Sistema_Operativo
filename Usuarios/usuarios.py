@@ -1,18 +1,20 @@
 import hashlib
 import os
 import customtkinter as ctk
-import os
-
-CREDENCIALES_PATH = "credenciales.txt"
+import sqlite3
+import hashlib
 
 def encriptar_contrasena(contrasena):
     return hashlib.sha256(contrasena.encode()).hexdigest()
 
 def guardar_credenciales(usuario, contrasena, rol):
-    with open(CREDENCIALES_PATH, "a") as archivo:
-        archivo.write(f"{usuario},{encriptar_contrasena(contrasena)},{rol}\n") 
-        ruta_base = os.path.join("usuarios", usuario)  # En la carpeta de tu proyecto "Sistema Operativo"
-        subcarpetas = ["Documentos", "Musica", "Descargas", "Imágenes"]
+    conn = sqlite3.connect('usuarios.db')
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO usuarios VALUES (?, ?, ?)", (usuario, encriptar_contrasena(contrasena), rol))
+    conn.commit()
+    conn.close()
+    ruta_base = "C:/Users/mateo/OneDrive/Documentos/Sistema Operativo/users/" + usuario  # Adjust the path as needed
+    subcarpetas = ["Documentos", "Musica", "Descargas", "Imágenes"]
 
     try:
             # Crear la carpeta base del usuario
@@ -30,31 +32,25 @@ def guardar_credenciales(usuario, contrasena, rol):
 
 def cargar_credenciales():
     credenciales = {}
-    if os.path.exists(CREDENCIALES_PATH):
-        with open(CREDENCIALES_PATH, "r") as archivo:
-            for linea in archivo:
-                datos = linea.strip().split(",")
-                
-                # Comprobar si la línea contiene 2 o 3 elementos
-                if len(datos) == 2:
-                    usuario, contrasena_hash = datos
-                    rol = "usuario"  # Rol predeterminado si no está especificado
-                elif len(datos) == 3:
-                    usuario, contrasena_hash, rol = datos
-                
-                credenciales[usuario] = (contrasena_hash, rol)
+    conn = sqlite3.connect('usuarios.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM usuarios")
+    for usuario, contrasena_hash, rol in cursor.fetchall():
+        credenciales[usuario] = (contrasena_hash, rol)
+    conn.close()
     return credenciales
 
 
 def verificar_credenciales(usuario, contrasena):
-    credenciales = cargar_credenciales()
-    contrasena_hash = encriptar_contrasena(contrasena)
-    
-    # Obtener la tupla (contrasena_hash_guardado, rol) o None si el usuario no existe
-    credencial = credenciales.get(usuario)
-    
-    # Verificar si el usuario existe y la contraseña es correcta
-    if credencial and credencial[0] == contrasena_hash:
+    conn = sqlite3.connect('usuarios.db')
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT contrasena, rol FROM usuarios WHERE usuario=?", (usuario,))
+    resultado = cursor.fetchone()
+
+    conn.close()
+
+    if resultado and resultado[0] == encriptar_contrasena(contrasena):
         return True
     return False
 
@@ -104,3 +100,4 @@ def abrir_ventana_crear_usuario(parent):
             ventana_crear_usuario.destroy()
         else:
             etiqueta_resultado.configure(text="Por favor ingrese un usuario, una contraseña y seleccione un rol.")
+
