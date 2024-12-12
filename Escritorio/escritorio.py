@@ -3,6 +3,7 @@ from PIL import Image
 from Escritorio.calculadora import abrir_calculadora
 from Recursos.recursos import monitorear_recursos
 from gestor.gestorArchivos import mostrar_gestor_archivos
+from juegos.culebrita import iniciar_culebrita
 import time
 import requests  # Para acceder a la API del clima
 import webview
@@ -76,6 +77,11 @@ def mostrar_escritorio(usuario):  # Recibe el nombre del usuario como argumento
     imagen_gestor = ctk.CTkImage(Image.open("imagenes/gestor.png"), size=(100, 100))
     boton_gestor = ctk.CTkButton(frame, image=imagen_gestor, text="", fg_color="transparent", command=lambda: mostrar_gestor_archivos(usuario))
     boton_gestor.grid(row=0, column=0, padx=10, pady=10, sticky="sw")
+
+    # Botón para abrir el juego de la culebrita
+    imagen_culebrita = ctk.CTkImage(Image.open("imagenes/culebrita.png"), size=(100, 100))
+    boton_culebrita = ctk.CTkButton(frame, image=imagen_culebrita, text="", fg_color="transparent", command=iniciar_culebrita)
+    boton_culebrita.grid(row=2, column=0, padx=10, pady=10, sticky="e")
 
     etiqueta_reloj = ctk.CTkLabel(frame, text="", font=("Arial", 14), fg_color="#18252a")
     etiqueta_reloj.grid(row=0, column=0, padx=10, pady=10, sticky="ne")  # Ubicación en la esquina inferior derecha
