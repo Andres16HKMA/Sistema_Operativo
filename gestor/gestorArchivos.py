@@ -9,6 +9,10 @@ import csv
 from openpyxl import Workbook  # Asegúrate de tener la biblioteca openpyxl instalada
 from Recursos.recursos import actualizar_lista_procesos, procesos_activos  # Asegúrate de tener esta función importada
 import sqlite3
+from gestor.funciones.edicion import abrir_txt  # Asegúrate de que esté correctamente importada
+
+gestor_abierto = False
+gestor = None  # Esta será la referencia de la ventana del gestor
 
 
 def obtener_rol(usuario):
@@ -31,11 +35,17 @@ def obtener_rol(usuario):
     conn.close()
     return rol_usuario
 
-
-    
-
 # Función para mostrar el gestor de archivos
 def mostrar_gestor_archivos(usuario):
+
+    global gestor_abierto, gestor
+
+    if gestor_abierto:
+        print("El gestor ya está abierto.")
+        return  # Si ya está abierto, no hacemos nada
+    
+    # Si no está abierto, creamos y mostramos la ventana del gestor
+    gestor_abierto = True  # Marcamos que el gestor está abierto
     # Crear la carpeta base para el usuario
     ruta_base_usuario = "C:/Users/mateo/OneDrive/Documentos/Sistema Operativo/users/" + usuario  # Adjust the path as needed
     raiz = "C:/Users/mateo/OneDrive/Documentos/Sistema Operativo/users" # Adjust the path as needed
@@ -45,6 +55,8 @@ def mostrar_gestor_archivos(usuario):
     gestor = ctk.CTk()
     gestor.geometry("800x600")
     gestor.title(f"Gestor de Archivos - {usuario}")
+    gestor.attributes("-topmost", True)
+
     gestor.resizable(False, False)  # No permitir redimensionar la ventana
 
     procesos_activos.append("Gestor de Archivos")  # Asegúrate de que procesos_activos esté definido
@@ -83,42 +95,68 @@ def mostrar_gestor_archivos(usuario):
     # Función para abrir PDFs y visualizarlos en una ventana
     def abrir_pdf(ruta_pdf):
         doc = fitz.open(ruta_pdf)
-        if doc.page_count > 0:
-            ventana_pdf = ctk.CTkToplevel()
-            ventana_pdf.title("Visor de PDF")
-            ventana_pdf.geometry("800x600")
+        ventana_pdf = ctk.CTkToplevel()
+        ventana_pdf.title("Visor de PDF")
+        ventana_pdf.geometry("800x600")
 
-            canvas = Canvas(ventana_pdf)
-            canvas.pack(side="left", fill="both", expand=True)
+        canvas = Canvas(ventana_pdf)
+        canvas.pack(side="left", fill="both", expand=True)
 
-            scrollbar = Scrollbar(ventana_pdf, command=canvas.yview)
-            scrollbar.pack(side="right", fill="y")
-            canvas.configure(yscrollcommand=scrollbar.set)
+        scrollbar = Scrollbar(ventana_pdf, command=canvas.yview)
+        scrollbar.pack(side="right", fill="y")
+        canvas.configure(yscrollcommand=scrollbar.set)
 
-            # Renderizar la primera página del PDF
-            page = doc[0]
-            pix = page.get_pixmap()
-            img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)  # Crear imagen desde pixmap
-            imagen_tk = ImageTk.PhotoImage(img)  # Convertir a imagen de tkinter
+        def mostrar_pagina(numero_pagina):
+            if 0 <= numero_pagina < len(doc):
+                page = doc[numero_pagina]
+                pix = page.get_pixmap()
+                img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+                imagen_tk = ImageTk.PhotoImage(img)
 
-            canvas.create_image(0, 0, anchor="nw", image=imagen_tk)
-            canvas.image = imagen_tk  # Mantener una referencia a la imagen
-            canvas.config(scrollregion=canvas.bbox("all"))
+                canvas.create_image(0, 0, anchor="nw", image=imagen_tk)
+                canvas.image = imagen_tk
+                canvas.config(scrollregion=canvas.bbox("all"))
 
+        # Variables y funciones para cambiar de página
+        pagina_actual = [0]  # Lista mutable para mantener referencia
+
+        def siguiente_pagina():
+            if pagina_actual[0] + 1 < len(doc):
+                pagina_actual[0] += 1
+                mostrar_pagina(pagina_actual[0])
+
+        def pagina_anterior():
+            if pagina_actual[0] > 0:
+                pagina_actual[0] -= 1
+                mostrar_pagina(pagina_actual[0])
+
+        # Botones de navegación
+        boton_atras = ctk.CTkButton(ventana_pdf, text="Anterior", command=pagina_anterior)
+        boton_atras.pack(side="left", padx=5, pady=5)
+
+        boton_siguiente = ctk.CTkButton(ventana_pdf, text="Siguiente", command=siguiente_pagina)
+        boton_siguiente.pack(side="left", padx=5, pady=5)
+
+        mostrar_pagina(pagina_actual[0])  # Mostrar la primera página al inicio
+
+        
     # Función para abrir carpetas o archivos
     def abrir_item():
-        seleccionado = lista_archivos.get(ctk.ACTIVE)
+        seleccionado = lista_archivos.get(ctk.ACTIVE)  # lista_archivos está aquí en gestorArchivos.py
         nueva_ruta = os.path.join(entry_ruta.get(), seleccionado)
+        
         if os.path.isdir(nueva_ruta):
-            if nueva_ruta.startswith(ruta_base_usuario):  # Permitir solo si la ruta es válida
-                entry_ruta.delete(0, ctk.END)
-                entry_ruta.insert(0, nueva_ruta)
-                listar_archivos(nueva_ruta)
-            else:
-                messagebox.showerror("Error", "No tienes permiso para acceder a esta carpeta.")
+            # Si es una carpeta, navegar dentro de ella
+            entry_ruta.delete(0, ctk.END)
+            entry_ruta.insert(0, nueva_ruta)
+            listar_archivos(nueva_ruta)
+        elif seleccionado.endswith(".txt"):
+            # Pasar lista_archivos a la función abrir_txt
+            abrir_txt(nueva_ruta, lista_archivos)
         elif seleccionado.endswith(".pdf"):
             abrir_pdf(nueva_ruta)
-
+        else:
+            messagebox.showinfo("Información", f"No se puede abrir el archivo '{seleccionado}'.")
     # Función para volver atrás en el directorio
     def volver_atras():
         if raiz!=entry_ruta.get():
@@ -253,17 +291,19 @@ def mostrar_gestor_archivos(usuario):
     boton_crear_archivo.grid(row=3, column=0, pady=10, padx=10)
 
 
-    def on_closing():
+    def on_close():
         try:
-            procesos_activos.remove("Gestor de Archivos")  # Remover al cerrar
-            actualizar_lista_procesos()  # Actualizar la visualización de procesos
+            actualizar_lista_procesos()  # Actualiza la lista de procesos al cerrar
         except ValueError:
-            print("El gestor no estaba en la lista de procesos activos.")
+            print("La gestor no estaba en la lista de procesos activos.")
         except Exception as e:
-            print(f"Ocurrió un error al cerrar el gestor: {e}")
+            print(f"Ocurrió un error al cerrar la gestor: {e}")
         finally:
+            procesos_activos.remove("Gestor de Archivos")
             gestor.destroy()
 
-    gestor.protocol("WM_DELETE_WINDOW", on_closing)  # Asegurarse de llamar a on_closing en el cierre
+
+
+    gestor.protocol("WM_DELETE_WINDOW", on_close)
 
     gestor.mainloop()

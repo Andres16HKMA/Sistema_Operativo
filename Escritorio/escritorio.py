@@ -2,14 +2,11 @@ import customtkinter as ctk
 from PIL import Image
 from Escritorio.calculadora import abrir_calculadora
 from Recursos.recursos import monitorear_recursos
-from Escritorio.gestorArchivos import mostrar_gestor_archivos
+from gestor.gestorArchivos import mostrar_gestor_archivos
 import time
 import requests  # Para acceder a la API del clima
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.edge.options import Options
-from selenium.webdriver.edge.webdriver import WebDriver
+import webview
+
 
 # Clave y configuración de la API del clima
 API_KEY = "663e66b760396f9d2f0198dd1483e3e0"
@@ -31,7 +28,7 @@ def obtener_clima():
 
 def mostrar_escritorio(usuario):  # Recibe el nombre del usuario como argumento
     escritorio = ctk.CTk()
-    escritorio.geometry("900x700")
+    escritorio.geometry("1000x700")
     escritorio.title("Escritorio")
     escritorio.configure(fg_color="#56637e")  # Fondo gris oscuro
     escritorio.resizable(False, False)  # No permitir redimensionar la ventana
@@ -48,26 +45,9 @@ def mostrar_escritorio(usuario):  # Recibe el nombre del usuario como argumento
     frame.grid_rowconfigure(2, weight=1)  # Espacio inferior
 
 
-    def edge():
-        # Ruta al controlador de Brave
-        driver_path = "C:/Users/mateo/Downloads/Instaladores/edgedriver_win64 (1)/msedgedriver.exe"  # Ajusta esta ruta
-
-        # Inicializar el controlador
-        driver = webdriver.Edge(driver_path)
-
-        # Abrir una nueva pestaña
-        driver.get("https://www.google.com")
-
-        # Buscar algo en Google
-        search_box = driver.find_element(By.NAME, "q")
-        search_box.send_keys("Python Selenium")
-        search_box.send_keys(Keys.RETURN)
-
-        # Esperar un tiempo (opcional)
-        driver.implicitly_wait(5)
-
-        # Cerrar el navegador
-        driver.quit()
+    def iniciar_webview():
+        webview.create_window('Mi Navegador Integrado', 'https://www.google.com')
+        webview.start()
 
     etiqueta_bienvenida = ctk.CTkLabel(frame, text=f"Bienvenido, {usuario}", font=("Arial", 24))
     etiqueta_bienvenida.grid(row=2, column=0, pady=10, padx=10)
@@ -84,10 +64,6 @@ def mostrar_escritorio(usuario):  # Recibe el nombre del usuario como argumento
 
     # Botón para abrir la calculadora
     imagen_calculadora = ctk.CTkImage(Image.open("imagenes/calculadora.png"), size=(100, 100))
-
-    # Al abrir la calculadora, también se actualiza la lista de procesos
-
-
     boton_calculadora = ctk.CTkButton(frame, image=imagen_calculadora, text="", fg_color="transparent", command=abrir_calculadora)
     boton_calculadora.grid(row=2, column=0, padx=10, pady=10, sticky="sw")
 
@@ -98,8 +74,7 @@ def mostrar_escritorio(usuario):  # Recibe el nombre del usuario como argumento
 
     # Botón para abrir el gestor de archivos
     imagen_gestor = ctk.CTkImage(Image.open("imagenes/gestor.png"), size=(100, 100))
-    boton_gestor = ctk.CTkButton(frame, image=imagen_gestor, text="", fg_color="transparent", 
-                                 command=lambda: mostrar_gestor_archivos(usuario))
+    boton_gestor = ctk.CTkButton(frame, image=imagen_gestor, text="", fg_color="transparent", command=lambda: mostrar_gestor_archivos(usuario))
     boton_gestor.grid(row=0, column=0, padx=10, pady=10, sticky="sw")
 
     etiqueta_reloj = ctk.CTkLabel(frame, text="", font=("Arial", 14), fg_color="#18252a")
@@ -109,7 +84,7 @@ def mostrar_escritorio(usuario):  # Recibe el nombre del usuario como argumento
     etiqueta_clima.grid(row=4, column=0, padx=10, pady=10, sticky="se")  # Justo arriba del reloj
 
     imagen_edge = ctk.CTkImage(Image.open("imagenes/edge.png"), size=(100, 100))
-    boton_edge = ctk.CTkButton(frame, image=imagen_edge, text="", fg_color="transparent", command=edge)
+    boton_edge = ctk.CTkButton(frame, image=imagen_edge, text="", fg_color="transparent", command=iniciar_webview)
 
     boton_edge.grid(row=3, column=0, padx=10, pady=10, sticky="sw")
 

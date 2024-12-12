@@ -18,6 +18,7 @@ def abrir_calculadora():
     calculadora.geometry("300x400")
     calculadora.title("Calculadora")
     calculadora.attributes("-topmost", True)
+    calculadora.resizable(False, False)  # No permitir redimensionar la ventana
 
     # Entrada para mostrar los números y operaciones
     global entrada  # Para que sea accesible desde la función calcular()
