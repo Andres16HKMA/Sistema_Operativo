@@ -10,6 +10,8 @@ from openpyxl import Workbook  # Asegúrate de tener la biblioteca openpyxl inst
 from Recursos.recursos import actualizar_lista_procesos, procesos_activos  # Asegúrate de tener esta función importada
 import sqlite3
 from gestor.funciones.edicion import abrir_txt  # Asegúrate de que esté correctamente importada
+from gestor.funciones.descarga_videos import ventana_descarga_video
+from gestor.funciones.visor_videos import abrir_video
 
 gestor_abierto = False
 gestor = None  # Esta será la referencia de la ventana del gestor
@@ -55,8 +57,6 @@ def mostrar_gestor_archivos(usuario):
     gestor = ctk.CTk()
     gestor.geometry("800x600")
     gestor.title(f"Gestor de Archivos - {usuario}")
-    gestor.attributes("-topmost", True)
-
     gestor.resizable(False, False)  # No permitir redimensionar la ventana
 
     procesos_activos.append("Gestor de Archivos")  # Asegúrate de que procesos_activos esté definido
@@ -90,7 +90,6 @@ def mostrar_gestor_archivos(usuario):
         except PermissionError:
             messagebox.showerror("Error", "Permiso denegado en este directorio")
 
-    # Función para abrir carpetas o archivos dentro de la carpeta base
 
     # Función para abrir PDFs y visualizarlos en una ventana
     def abrir_pdf(ruta_pdf):
@@ -155,6 +154,9 @@ def mostrar_gestor_archivos(usuario):
             abrir_txt(nueva_ruta, lista_archivos)
         elif seleccionado.endswith(".pdf"):
             abrir_pdf(nueva_ruta)
+        elif seleccionado.endswith(".mp4") or seleccionado.endswith(".webm"):
+            # Si es un archivo de video (mp4 o webm), llamar a la función para abrirlo
+            abrir_video(nueva_ruta, usuario)  # Pasar la ruta del archivo de video
         else:
             messagebox.showinfo("Información", f"No se puede abrir el archivo '{seleccionado}'.")
     # Función para volver atrás en el directorio
@@ -214,7 +216,7 @@ def mostrar_gestor_archivos(usuario):
 
     # Función para crear un archivo desde el proyecto
     def crear_archivo():
-    # Ventana emergente para pedir nombre del archivo
+        # Ventana emergente para pedir nombre del archivo
         ventana_archivo = ctk.CTkToplevel()
         ventana_archivo.title("Crear archivo")
 
@@ -224,10 +226,9 @@ def mostrar_gestor_archivos(usuario):
         entry_nombre_archivo = ctk.CTkEntry(ventana_archivo, width=300)
         entry_nombre_archivo.pack(padx=10, pady=10)
 
-        # Crear una lista de tipos de archivo
-        tipos_archivos = ["txt", "docx", "pdf", "csv", "xlsx", "jpg", "png"]
+        # Crear una lista de tipos de archivo, incluyendo "video"
+        tipos_archivos = ["txt", "docx", "pdf", "csv", "xlsx", "jpg", "png", "video"]
 
-        # Combobox para seleccionar el tipo de archivo
         etiqueta_tipo = ctk.CTkLabel(ventana_archivo, text="Seleccione el tipo de archivo:")
         etiqueta_tipo.pack(padx=10, pady=10)
 
@@ -238,59 +239,65 @@ def mostrar_gestor_archivos(usuario):
         def confirmar_creacion():
             nombre_archivo = entry_nombre_archivo.get()
             tipo_archivo = combo_tipo_archivo.get()
-            
-            if nombre_archivo:
-                nueva_ruta_archivo = os.path.join(entry_ruta.get(), f"{nombre_archivo}.{tipo_archivo}")
 
-                # Crear el archivo de texto
-                if tipo_archivo == "txt":
-                    with open(nueva_ruta_archivo, 'w') as f:
-                        f.write("Nuevo archivo creado")
+            if tipo_archivo == "video":
+                # Si el tipo de archivo es "video", llamar a la función de descarga de video
+                ventana_descarga_video(usuario)  # Llamamos a la ventana de descarga de video
+                ventana_archivo.destroy()  # Cerrar la ventana de creación de archivo inmediatamente
 
-                # Crear un archivo de Word (docx)
-                elif tipo_archivo == "docx":
-                    doc = Document()
-                    doc.add_paragraph("Nuevo documento creado")
-                    doc.save(nueva_ruta_archivo)
+            else:
+                # Si no es video, proceder a crear el archivo como antes
+                if nombre_archivo:
+                    nueva_ruta_archivo = os.path.join(entry_ruta.get(), f"{nombre_archivo}.{tipo_archivo}")
 
-                # Crear un archivo PDF
-                elif tipo_archivo == "pdf":
-                    pdf = FPDF()
-                    pdf.add_page()
-                    pdf.set_font("Arial", size=12)
-                    pdf.cell(200, 10, txt="Nuevo PDF creado", ln=True)
-                    pdf.output(nueva_ruta_archivo)
+                    # Crear el archivo de texto
+                    if tipo_archivo == "txt":
+                        with open(nueva_ruta_archivo, 'w') as f:
+                            f.write("Nuevo archivo creado")
 
-                # Crear un archivo CSV
-                elif tipo_archivo == "csv":
-                    with open(nueva_ruta_archivo, 'w', newline='') as f:
-                        writer = csv.writer(f)
-                        writer.writerow(["Nuevo", "archivo", "CSV", "creado"])
+                    # Crear un archivo de Word (docx)
+                    elif tipo_archivo == "docx":
+                        doc = Document()
+                        doc.add_paragraph("Nuevo documento creado")
+                        doc.save(nueva_ruta_archivo)
 
-                # Crear un archivo Excel
-                elif tipo_archivo == "xlsx":
-                    wb = Workbook()
-                    ws = wb.active
-                    ws.append(["Nuevo archivo", "Excel", "creado"])
-                    wb.save(nueva_ruta_archivo)
+                    # Crear un archivo PDF
+                    elif tipo_archivo == "pdf":
+                        pdf = FPDF()
+                        pdf.add_page()
+                        pdf.set_font("Arial", size=12)
+                        pdf.cell(200, 10, txt="Nuevo PDF creado", ln=True)
+                        pdf.output(nueva_ruta_archivo)
 
-                # Para imágenes, simplemente creamos un archivo vacío
-                elif tipo_archivo in ["jpg", "png"]:
-                    with open(nueva_ruta_archivo, 'wb') as f:
-                        f.write(b'')  # Crear un archivo vacío (no será una imagen válida)
+                    # Crear un archivo CSV
+                    elif tipo_archivo == "csv":
+                        with open(nueva_ruta_archivo, 'w', newline='') as f:
+                            writer = csv.writer(f)
+                            writer.writerow(["Nuevo", "archivo", "CSV", "creado"])
 
-                listar_archivos(entry_ruta.get())
-                ventana_archivo.destroy()
+                    # Crear un archivo Excel
+                    elif tipo_archivo == "xlsx":
+                        wb = Workbook()
+                        ws = wb.active
+                        ws.append(["Nuevo archivo", "Excel", "creado"])
+                        wb.save(nueva_ruta_archivo)
 
+                    # Para imágenes, simplemente creamos un archivo vacío
+                    elif tipo_archivo in ["jpg", "png"]:
+                        with open(nueva_ruta_archivo, 'wb') as f:
+                            f.write(b'')  # Crear un archivo vacío (no será una imagen válida)
+
+                    # Listar los archivos después de crear
+                    listar_archivos(entry_ruta.get())
+                    ventana_archivo.destroy()
+
+        # Botón para confirmar la creación
         boton_confirmar = ctk.CTkButton(ventana_archivo, text="Crear", command=confirmar_creacion)
         boton_confirmar.pack(padx=10, pady=10)
 
-
-    # Botón para crear un archivo nuevo
+    # Botón para crear archivo
     boton_crear_archivo = ctk.CTkButton(frame, text="Crear Archivo", command=crear_archivo)
     boton_crear_archivo.grid(row=3, column=0, pady=10, padx=10)
-
-
     def on_close():
         try:
             actualizar_lista_procesos()  # Actualiza la lista de procesos al cerrar
