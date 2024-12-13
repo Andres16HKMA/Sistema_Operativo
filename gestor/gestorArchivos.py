@@ -12,6 +12,7 @@ import sqlite3
 from gestor.funciones.edicion import abrir_txt  # Asegúrate de que esté correctamente importada
 from gestor.funciones.descarga_videos import ventana_descarga_video
 from gestor.funciones.visor_videos import abrir_video
+from gestor.funciones.visor_imagenes import abrir_visor_imagenes
 
 gestor_abierto = False
 gestor = None  # Esta será la referencia de la ventana del gestor
@@ -157,6 +158,9 @@ def mostrar_gestor_archivos(usuario):
         elif seleccionado.endswith(".mp4") or seleccionado.endswith(".webm"):
             # Si es un archivo de video (mp4 o webm), llamar a la función para abrirlo
             abrir_video(nueva_ruta, usuario)  # Pasar la ruta del archivo de video
+        elif seleccionado.endswith(".png") or seleccionado.endswith(".jpg"):
+            # Si es un archivo de video (mp4 o webm), llamar a la función para abrirlo
+            abrir_visor_imagenes(nueva_ruta)  # Pasar la ruta del archivo de video
         else:
             messagebox.showinfo("Información", f"No se puede abrir el archivo '{seleccionado}'.")
     # Función para volver atrás en el directorio

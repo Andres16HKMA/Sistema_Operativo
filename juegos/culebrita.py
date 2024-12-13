@@ -1,16 +1,10 @@
 import pygame
 import random
-from Recursos.recursos import actualizar_lista_procesos, procesos_activos  # Asegúrate de tener esta función importada
 
 def iniciar_culebrita():
     # Inicializar pygame
     pygame.init()
 
-
-    nombre_proceso = "Culebrita"
-    procesos_activos.append(nombre_proceso)
-    actualizar_lista_procesos()  # Actualizar la interfaz
-    
     # Dimensiones de la ventana
     ANCHO, ALTO = 800, 600
     TAMANIO_CUADRO = 20
@@ -134,6 +128,6 @@ def iniciar_culebrita():
             pygame.display.flip()
 
             # Controlar la velocidad del juego
-            reloj.tick(10 + puntuacion // 5)  # Incrementa la velocidad a medida que aumenta la puntuación
+            reloj.tick(3 + puntuacion // 3)  # Incrementa la velocidad a medida que aumenta la puntuación
 
     main()  # Llamar al bucle principal del juego

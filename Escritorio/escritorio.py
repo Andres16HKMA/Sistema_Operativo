@@ -4,6 +4,7 @@ from Escritorio.calculadora import abrir_calculadora
 from Recursos.recursos import monitorear_recursos
 from gestor.gestorArchivos import mostrar_gestor_archivos
 from juegos.culebrita import iniciar_culebrita
+
 import time
 import requests  # Para acceder a la API del clima
 import webview
@@ -11,7 +12,7 @@ import webview
 
 # Clave y configuración de la API del clima
 API_KEY = "663e66b760396f9d2f0198dd1483e3e0"
-CIUDAD = "Manizales,CO"
+CIUDAD = "Ibague"
 URL_CLIMA = f"http://api.openweathermap.org/data/2.5/weather?q={CIUDAD}&appid={API_KEY}&units=metric&lang=es"
 
 def obtener_clima():

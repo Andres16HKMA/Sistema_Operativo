@@ -4,6 +4,7 @@ import tkinter as tk
 import pygame
 from tkinter import messagebox
 from moviepy.editor import VideoFileClip
+from Recursos.recursos import actualizar_lista_procesos, procesos_activos  # Asegúrate de tener esta función importada
 
 def abrir_video(archivo_video, usuario):
     if not archivo_video:
@@ -16,6 +17,13 @@ def abrir_video(archivo_video, usuario):
         messagebox.showerror("Error", "La carpeta de videos no existe.")
         return
 
+    procesos_activos.append("Visor de videos")  # Asegúrate de que procesos_activos esté definido
+    try:
+        actualizar_lista_procesos()  # Actualizar la visualización de procesos
+    except ValueError:
+        print("No se pudo actualizar el proceso")
+    except Exception as e:
+        print(f"Ocurrió un error con el gestor: {e}")      
     # Obtener el nombre del archivo de video sin la extensión
     nombre_video = os.path.splitext(os.path.basename(archivo_video))[0]
 
@@ -88,8 +96,15 @@ def abrir_video(archivo_video, usuario):
     def cerrar_video():
         cap.release()  # Liberar los recursos
         pygame.mixer.music.stop()  # Detener el audio
-        ventana_video.destroy()  # Cerrar la ventana del video
-
+        try:
+            actualizar_lista_procesos()  # Actualiza la lista de procesos al cerrar
+        except ValueError:
+            print("El visor de videos no estaba en la lista de procesos activos.")
+        except Exception as e:
+            print(f"Ocurrió un error al cerrar el visor: {e}")
+        finally:
+            procesos_activos.remove("Visor de videos")
+            ventana_video.destroy()
     # Asociar la función de cierre a la ventana
     ventana_video.protocol("WM_DELETE_WINDOW", cerrar_video)
 
